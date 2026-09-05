@@ -1,6 +1,6 @@
 # MiniMax Music Prompt Studio 🎵
 
-A dark-mode Windows desktop application built with **CustomTkinter** and **TkinterDnD2**. It allows you to drag and drop MP3 and audio tracks, automatically extracts musical intelligence (BPM tempo, musical key, energy, spectral brightness, duration) with **Librosa**, and connects to your local **Ollama** LLM to generate structured, production-ready **MiniMax Music** prompts.
+A simmple application that enables you to create custom MiniMax Music prompts by simply dragging and dropping audio files. The application uses **Librosa** for audio analysis and **Ollama** for generating structured prompts. allows you to drag and drop MP3 and audio tracks, automatically extracts musical intelligence (BPM tempo, musical key, energy, spectral brightness, duration) with **Librosa**, and connects to your local **Ollama** LLM to generate structured, production-ready **MiniMax Music** prompts.
 
 ---
 
