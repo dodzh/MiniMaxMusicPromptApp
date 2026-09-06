@@ -745,6 +745,20 @@ class MiniMaxPromptApp(ctk.CTk, TkinterDnD.DnDWrapper):
             return
         self._copy_section(tags_section, "Production TAGS Copied!", "Production TAGS copied to clipboard!")
 
+    def _clean_lyrics_for_copy(self, lyrics_section: str) -> str:
+        """Strip metadata headers (e.g. '### [SONG STRUCTURE & LYRICS]') and any
+        other markdown header lines so that only bracketed section markers
+        ([intro], [verse], [pre-chorus], [chorus], ...) and the raw lyrics
+        themselves are returned."""
+        text = lyrics_section or ""
+        # Remove markdown header lines. Section tags such as [intro], [verse]
+        # do not start with '#' (they begin with '[') and are therefore kept.
+        text = re.sub(r"(?m)^\s*#{1,6}.*$", "", text)
+        text = text.strip()
+        # Collapse runs of blank lines into a single separator for tidiness
+        text = re.sub(r"\n{2,}", "\n\n", text)
+        return text
+
     def _on_copy_lyrics(self):
         _, lyrics_section = self._split_output_sections()
         if lyrics_section is None:
@@ -754,7 +768,15 @@ class MiniMaxPromptApp(ctk.CTk, TkinterDnD.DnDWrapper):
                 "Please generate a full prompt first.",
             )
             return
-        self._copy_section(lyrics_section, "Lyrics Copied!", "Lyrics copied to clipboard!")
+        cleaned = self._clean_lyrics_for_copy(lyrics_section)
+        if not cleaned:
+            messagebox.showinfo(
+                "Nothing to Copy",
+                "No '[SONG STRUCTURE & LYRICS]' section was found in the output.\n"
+                "Please generate a full prompt first.",
+            )
+            return
+        self._copy_section(cleaned, "Lyrics Copied!", "Lyrics copied to clipboard!")
 
     def _on_save_file(self):
         text = self.output_textbox.get("1.0", "end").strip()
