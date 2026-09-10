@@ -61,18 +61,17 @@ def categorize_tempo(bpm: float) -> str:
     else:
         return "Presto / High Speed"
 
-
-def estimate_key_and_mode(y: np.ndarray, sr: int) -> str:
-    """Estimate the musical key and major/minor scale from audio chroma."""
+def estimate_key_and_mode(y_harmonic: np.ndarray, sr: int) -> str:
+    """Estimate the musical key and major/minor scale from isolated harmonic audio chroma with tuning correction."""
     try:
-        chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
+        tuning = librosa.estimate_tuning(y=y_harmonic, sr=sr)
+        chroma = librosa.feature.chroma_cqt(y=y_harmonic, sr=sr, tuning=tuning)
     except Exception:
-        chroma = librosa.feature.chroma_stft(y=y, sr=sr)
+        chroma = librosa.feature.chroma_stft(y=y_harmonic, sr=sr)
 
     chroma_mean = np.mean(chroma, axis=1)
-    notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    notes = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
     
-    # Major & Minor standard pitch profiles (Krumhansl-Schmuckler simplified)
     major_profile = np.array([6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88])
     minor_profile = np.array([6.33, 2.68, 3.52, 5.38, 2.60, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17])
 
@@ -80,13 +79,11 @@ def estimate_key_and_mode(y: np.ndarray, sr: int) -> str:
     best_key = "C Major"
 
     for i in range(12):
-        # Major correlation
         maj_corr = np.corrcoef(np.roll(major_profile, i), chroma_mean)[0, 1]
         if maj_corr > best_score:
             best_score = maj_corr
             best_key = f"{notes[i]} Major"
 
-        # Minor correlation
         min_corr = np.corrcoef(np.roll(minor_profile, i), chroma_mean)[0, 1]
         if min_corr > best_score:
             best_score = min_corr
@@ -116,8 +113,11 @@ def analyze_audio(file_path: str, max_duration: Optional[float] = 120.0) -> Audi
     # 1. Harmonic-Percussive Separation for more accurate beat tracking
     y_harmonic, y_percussive = librosa.effects.hpss(y)
 
-    # 2. Tempo / BPM Estimation
-    tempo, _ = librosa.beat.beat_track(y=y_percussive, sr=sr)
+# 2. Tempo / BPM Estimation with adjusted hop_length for transient smoothing
+    hop_length = 512  # Try increasing to 1024 if acoustic tracks still double-count
+    onset_env = librosa.onset.onset_strength(y=y_percussive, sr=sr, hop_length=hop_length)
+    
+    tempo, _ = librosa.beat.beat_track(onset_envelope=onset_env, sr=sr, hop_length=hop_length)
     if hasattr(tempo, '__iter__'):
         tempo_val = float(tempo[0]) if len(tempo) > 0 else 120.0
     else:
